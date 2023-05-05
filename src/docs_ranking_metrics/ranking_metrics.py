@@ -1,7 +1,7 @@
 from rank_bm25 import BM25Okapi
 from typing import List, Dict, Tuple, Union
 from sentence_transformers import SentenceTransformer, util
-from src.ranking_metrics.evaluation_metrics import (
+from .evaluation_metrics import (
     TopK, AverageLoc, FDARO
 )
 

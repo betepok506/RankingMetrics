@@ -1,5 +1,5 @@
 from typing import List, Union, Tuple, Dict
-
+import numpy as np
 
 class TopK:
     TOP1 = 1
@@ -238,7 +238,7 @@ def _check_update_args(fake_doc_label: Union[int, List[int]],
         raise TypeError("The list of ranked elements should be of type 'list'!")
     else:
         for item in ranking_list:
-            if not (isinstance(item, tuple) or isinstance(item, list)) or \
-                    not (isinstance(item[0], float) or isinstance(item[0], int)) or not isinstance(item[1], int) or \
+            if not isinstance(item, (tuple, list)) or \
+                    not isinstance(item[0], (np.floating, float)) or not isinstance(item[1], int) or \
                     len(item) != 2:
                 raise TypeError("The list of ranked elements should contain pairs of elements: rating, label")
