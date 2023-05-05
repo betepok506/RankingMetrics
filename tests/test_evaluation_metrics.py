@@ -2,8 +2,8 @@
 Данный модуль содержит тесты для модуля `evaluation_metrics.py`
 """
 import unittest
-from src.ranking_metrics import RankingMetrics, Bm25
-from src.ranking_metrics.evaluation_metrics import (
+from src.docs_ranking_metrics import RankingMetrics, Bm25
+from src.docs_ranking_metrics.evaluation_metrics import (
     TopK, AverageLoc, FDARO
 )
 import mock
