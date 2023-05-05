@@ -1,4 +1,4 @@
-from metrics.ranking_metrics import (
+from src.ranking_metrics.ranking_metrics import (
     RankingMetrics,
     Bm25,
     LaBSE
