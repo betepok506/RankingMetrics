@@ -1,4 +1,4 @@
-from metrics.ranking_metrics import (
+from src.docs_ranking_metrics.ranking_metrics import (
     RankingMetrics,
     Bm25,
     LaBSE
@@ -13,7 +13,7 @@ data = [{"query": ")what was the immediate impact of the success of the manhatta
 
 if __name__ == "__main__":
     # Объявление метрик
-    metrics = [Bm25(), LaBSE()]
+    metrics = [Bm25()]
     # Объявление класса агрегирующего обновление метрик
     rm = RankingMetrics(metrics)
     for item in data:
