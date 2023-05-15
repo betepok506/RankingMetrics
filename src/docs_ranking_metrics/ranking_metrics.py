@@ -133,7 +133,7 @@ class LaBSE:
         `List[Tuple[float, int]]`
             Отсортированный список ранжируемых элементов по релевантности
         """
-        return sorted([item for item in zip(scores, labels)], key=lambda x: x[0])
+        return sorted([item for item in zip(scores, labels)], key=lambda x: x[0], reverse=True)
 
 
 class RankingMetrics:
