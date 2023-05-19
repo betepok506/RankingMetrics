@@ -4,7 +4,10 @@ from sentence_transformers import SentenceTransformer, util
 from .evaluation_metrics import (
     TopK, AverageLoc, FDARO
 )
-
+from .models import ModelUSE
+import tensorflow as tf
+from tensorflow import convert_to_tensor
+import torch
 
 class Bm25:
     """Класс метрики ранжирования bm25"""
@@ -133,8 +136,59 @@ class LaBSE:
         `List[Tuple[float, int]]`
             Отсортированный список ранжируемых элементов по релевантности
         """
-        return sorted([item for item in zip(scores, labels)], key=lambda x: x[0])
+        return sorted([item for item in zip(scores, labels)], key=lambda x: x[0], reverse=True)
 
+class USE:
+    """Класс метрики ранжирования USE"""
+    def __init__(self):
+        self.model = ModelUSE()
+
+    def name(self) -> str:
+        return "USE"
+
+    def ranking(self, query: str, sentences: List[str], labels: List[int]) -> List[Tuple[float, int]]:
+        """
+        Функция ранжирования USE
+
+        Parameters
+        ------------
+        query: `str`
+            Строка запроса
+        sentences: `List[str]`
+            Список строк текстов
+        labels: `List[int]`
+            Список меток текстов
+
+        Returns
+        ------------
+        `List[Tuple[float, int]]`
+            Список оценок релевантности текстов
+        """
+
+        sentences.append(query)
+        embeddings = [x.numpy() for x in self.model.encode(sentences)]
+        embeddings = torch.Tensor(embeddings)
+        scores = util.pytorch_cos_sim(embeddings[-1], embeddings[:-1]).numpy()[0]
+        scores = self._sorted(scores, labels)
+        return scores
+
+    def _sorted(self, scores: List[float], labels: List[int]) -> List[Tuple[float, int]]:
+        """
+        Функция сортировки оценки и лейблов
+
+        Parameters
+        ------------
+        scores: `List[float]`
+            Массив оценок ранка присвоенных ранкером
+        labels: `List[int]`
+            Массив меток
+
+        Returns
+        ------------
+        `List[Tuple[float, int]]`
+            Отсортированный список ранжируемых элементов по релевантности
+        """
+        return sorted([item for item in zip(scores, labels)], key=lambda x: x[0], reverse=True)
 
 class RankingMetrics:
     """Класс аккумулирующий все метрики"""

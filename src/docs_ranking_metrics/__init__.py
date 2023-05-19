@@ -1,4 +1,4 @@
-from .ranking_metrics import RankingMetrics, Bm25, LaBSE
+from .ranking_metrics import RankingMetrics, Bm25, LaBSE, USE
 
-__all__ = ['RankingMetrics', 'Bm25', 'LaBSE']
-__version__ = "0.0.2.dev2"
+__all__ = ['RankingMetrics', 'Bm25', 'LaBSE', "USE"]
+__version__ = "0.0.4.dev2"
