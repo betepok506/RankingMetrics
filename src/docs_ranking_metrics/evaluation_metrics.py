@@ -74,14 +74,21 @@ class TopK:
 
 
 class FDARO:
-    """Метрика оценивает как часто фейковый документ находится выше релевантного"""
+    """
+    Метрика оценивает как часто фейковый документ находится выше релевантного.
+    Представлены две версии. Первая (FDARO@v1) оценивает как часто фейк документ
+    находится выше ВСЕХ релевантных. Вторая (FDARO@v2) - как часто фейковый документ
+    оказывается выше хотя бы одного.
+    """
 
     def __init__(self, ranking_metrics: List) -> None:
         self._separator = "_"
         self.metrics, self.calls_cnt = {}, {}
+        self.versions = ["v1", "v2"]
         for cur_metric in ranking_metrics:
-            self.metrics[cur_metric.name() + self._separator + self.name()] = 0
-            self.calls_cnt[cur_metric.name() + self._separator + self.name()] = 0
+            for version in self.versions:
+                self.metrics[cur_metric.name() + self._separator + self.name() + version] = 0
+                self.calls_cnt[cur_metric.name() + self._separator + self.name() + version] = 0
 
     def update(self, metric_name: str,
                ranking_list: List[Union[Tuple[float, int], List[Union[float, int]]]],
@@ -112,9 +119,28 @@ class FDARO:
                 break
 
         if is_first:
-            self.metrics[metric_name + self._separator + self.name()] += 1
+            self.metrics[metric_name + self._separator + self.name() + self.versions[0]] += 1
+        self.calls_cnt[metric_name + self._separator + self.name() + self.versions[0]] += 1
 
-        self.calls_cnt[metric_name + self._separator + self.name()] += 1
+        scores = []
+        selected = []
+        for item in ranking_list:
+            scores.append(item[0])
+            selected.append(item[1])
+        selected = np.array(selected)
+        scores = np.array(scores)
+
+        res = np.where(selected == 1.)
+        selected_idxs = res[0]
+        fake_idxs = np.where(selected == fake_doc_label[0])[0]
+        upper_or_not = (scores[fake_idxs] - scores[selected_idxs]) > 1e-12
+        upper_or_not = upper_or_not.astype(int)
+        if selected.sum() == -1:  # если пользователь ничего не выбрал, считаем, что метрика равна 1
+            upper_or_not = np.array([1])
+
+        if upper_or_not.sum() > 0:
+            self.metrics[metric_name + self._separator + self.name() + self.versions[1]] += 1
+        self.calls_cnt[metric_name + self._separator + self.name() + self.versions[1]] += 1
 
     def get(self) -> Dict[str, float]:
         """
@@ -127,9 +153,10 @@ class FDARO:
         """
         result = {}
         for metric_name, value in self.metrics.items():
+            version = metric_name.split('@')[1]
             metric_name = metric_name.split("_")[0]
-            result[metric_name + self._separator + self.name()] = \
-                value / max(1, self.calls_cnt[metric_name + self._separator + self.name()])
+            result[metric_name + self._separator + self.name() + version] = \
+                value / max(1, self.calls_cnt[metric_name + self._separator + self.name() + version])
 
         return result
 
@@ -142,7 +169,7 @@ class FDARO:
         `str`
             Имя метрики
         '''
-        return "FDARO"
+        return "FDARO@"
 
 
 class AverageLoc:
@@ -213,6 +240,153 @@ class AverageLoc:
             Имя метрики
         '''
         return "AverageLoc"
+
+
+class AverageRelLoc:
+    """
+    Метрика для оценки среднего относительного места фейкового документа.
+    Чем ближе число к нулю, тем выше ставится фейковый документ в ранжировании
+    """
+
+    def __init__(self, ranking_metrics) -> None:
+        self._separator = "_"
+        self.metrics, self.calls_cnt = {}, {}
+        for cur_metric in ranking_metrics:
+            self.metrics[cur_metric.name() + self._separator + self.name()] = 0  # инициализируем значение метрики
+            self.calls_cnt[cur_metric.name() + self._separator + self.name()] = 0
+
+    def update(self, metric_name: str,
+               ranking_list: List[Union[Tuple[float, int], List[Union[float, int]]]],
+               fake_doc_label: Union[int, list] = -1) -> None:
+        """
+        Функция для обновления значений метрики
+
+        Parameters
+        -------------
+        metric_name: `str`
+            Название метрики
+        ranking_list: `List[Union[Tuple[float, int], List[float, int]]]`
+            Результат ранжирующей модели
+        fake_doc_label: `Union[int, List[int]]`
+            Метка или массив меток, принадлежащих фейковым документам
+        """
+        if isinstance(fake_doc_label, int):
+            fake_doc_label = [fake_doc_label]
+
+        _check_update_args(fake_doc_label, ranking_list)
+
+        is_fake = False
+        for ind, item in enumerate(ranking_list):
+            if item[1] in fake_doc_label:
+                self.metrics[metric_name + self._separator + self.name()] += (ind + 1) / len(ranking_list)
+                is_fake = True
+
+        if not is_fake:
+            self.metrics[metric_name + self._separator + self.name()] += 1
+
+        self.calls_cnt[metric_name + self._separator + self.name()] += 1
+
+    def get(self) -> Dict[str, float]:
+        """
+        Функция для получения словаря значений подсчитанных метрик
+
+        Returns
+        -------------
+        `Dict[str, float]`
+            Словарь подсчитанных значений метрик
+        """
+        result = {}
+        for metric_name, value in self.metrics.items():
+            metric_name = metric_name.split("_")[0]
+            result[metric_name + self._separator + self.name()] = \
+                value / max(1, self.calls_cnt[metric_name + self._separator + self.name()])
+
+        return result
+    def name(self) -> str:
+        '''
+        Функция для получения имени метрики
+
+        Returns
+        -------------
+        `str`
+            Имя метрики
+        '''
+        return "AverageRelLoc"
+
+
+class UpQuartile:
+    """Метрика для оценки частоты попадания фейкового документа в топ 25%"""
+
+    def __init__(self, ranking_metrics) -> None:
+        self._separator = "_"
+        self.metrics, self.calls_cnt = {}, {}
+        for cur_metric in ranking_metrics:
+            self.metrics[cur_metric.name() + self._separator + self.name()] = 0
+            self.calls_cnt[cur_metric.name() + self._separator + self.name()] = 0
+
+    def update(self, metric_name: str,
+               ranking_list: List[Union[Tuple[float, int], List[Union[float, int]]]],
+               fake_doc_label: Union[int, list] = -1) -> None:
+        """
+        Функция для обновления значений метрики
+
+        Parameters
+        -------------
+        metric_name: `str`
+            Название метрики
+        ranking_list: `List[Union[Tuple[float, int], List[float, int]]]`
+            Результат ранжирующей модели
+        fake_doc_label: `Union[int, List[int]]`
+            Метка или массив меток, принадлежащих фейковым документам
+        """
+        if isinstance(fake_doc_label, int):
+            fake_doc_label = [fake_doc_label]
+
+        _check_update_args(fake_doc_label, ranking_list)
+
+        scores = []
+        selected = []
+        for item in ranking_list:
+            scores.append(item[0])
+            selected.append(item[1])
+        selected = np.array(selected)
+        scores = np.array(scores)
+
+        upper_quartile = np.quantile(scores, 0.75)
+        fake_idxs = np.where(selected == fake_doc_label[0])[0]
+
+        if scores[fake_idxs] >= upper_quartile:
+            self.metrics[metric_name + self._separator + self.name()] += 1
+
+        self.calls_cnt[metric_name + self._separator + self.name()] += 1
+
+    def get(self) -> Dict[str, float]:
+        """
+        Функция для получения словаря значений подсчитанных метрик
+
+        Returns
+        -------------
+        `Dict[str, float]`
+            Словарь подсчитанных значений метрик
+        """
+        result = {}
+        for metric_name, value in self.metrics.items():
+            metric_name = metric_name.split("_")[0]
+            result[metric_name + self._separator + self.name()] = \
+                value / max(1, self.calls_cnt[metric_name + self._separator + self.name()])
+
+        return result
+
+    def name(self) -> str:
+        '''
+        Функция для получения имени метрики
+
+        Returns
+        -------------
+        `str`
+            Имя метрики
+        '''
+        return "UpQuartile"
 
 
 def _check_update_args(fake_doc_label: Union[int, List[int]],
