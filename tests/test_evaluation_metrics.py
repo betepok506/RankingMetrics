@@ -195,6 +195,8 @@ class TestTopK(unittest.TestCase):
 
 class TestFDARO(unittest.TestCase):
     def test_init(self):
+        vesrions = ["v1", "v2"]
+
         mock_bm25 = Mock()
         mock_bm25.name.return_value = "Bm25"
 
@@ -203,8 +205,9 @@ class TestFDARO(unittest.TestCase):
 
         r_metrics = [mock_bm25, mock_labse]
         metric = FDARO(r_metrics)
-        self.assertEqual(len(metric.metrics), len(r_metrics))
-        self.assertEqual(len(metric.calls_cnt), len(r_metrics))
+        # умножаем длину ответа на 2, так как две версии FDARO
+        self.assertEqual(len(metric.metrics), len(r_metrics) * 2)
+        self.assertEqual(len(metric.calls_cnt), len(r_metrics) * 2)
         cnt = 0
         for name_metric in metric.metrics.keys():
             if name_metric in metric.calls_cnt:
@@ -220,7 +223,9 @@ class TestFDARO(unittest.TestCase):
 
         # Проверка правильности генерации ключей в словаре
         for cur_metric in r_metrics:
-            self.assertIn(cur_metric.name() + metric._separator + metric.name(), metric.metrics)
+            self.assertIn(cur_metric.name() + metric._separator + metric.name() + vesrions[0], metric.metrics)
+            self.assertIn(cur_metric.name() + metric._separator + metric.name() + vesrions[1], metric.metrics)
+
 
     def test_update_case_1(self):
         mock_bm25 = Mock()
@@ -244,36 +249,36 @@ class TestFDARO(unittest.TestCase):
         metric = FDARO(r_metrics)
 
         metric.update("Bm25", [(0.88, RankingMetrics.FAKE_DOC_LABEL), (0.69, 1)], RankingMetrics.FAKE_DOC_LABEL)
-        self.assertEqual(metric.metrics[f"Bm25_{metric.name()}"], 1)
-        self.assertEqual(metric.calls_cnt[f"Bm25_{metric.name()}"], 1)
+        self.assertEqual(metric.metrics[f"Bm25_{metric.name()}v1"], 1)
+        self.assertEqual(metric.calls_cnt[f"Bm25_{metric.name()}v1"], 1)
 
         metric.update("Bm25", [(0.88, 0), (0.69, RankingMetrics.FAKE_DOC_LABEL), (0.44, 0),
                                (0.43, 0), (0.22, 0), (0.21, 0)],
                       RankingMetrics.FAKE_DOC_LABEL)
 
-        self.assertEqual(metric.metrics[f"Bm25_{metric.name()}"], 2)
-        self.assertEqual(metric.calls_cnt[f"Bm25_{metric.name()}"], 2)
+        self.assertEqual(metric.metrics[f"Bm25_{metric.name()}v1"], 2)
+        self.assertEqual(metric.calls_cnt[f"Bm25_{metric.name()}v1"], 2)
 
         metric.update("Bm25", [(0.88, 3), (0.69, 0), (0.44, 0),
                                (0.43, 0), (0.22, RankingMetrics.FAKE_DOC_LABEL), (0.21, 0)],
                       RankingMetrics.FAKE_DOC_LABEL)
 
-        self.assertEqual(metric.metrics[f"Bm25_{metric.name()}"], 2)
-        self.assertEqual(metric.calls_cnt[f"Bm25_{metric.name()}"], 3)
+        self.assertEqual(metric.metrics[f"Bm25_{metric.name()}v1"], 2)
+        self.assertEqual(metric.calls_cnt[f"Bm25_{metric.name()}v1"], 3)
 
         metric.update("Bm25", [(0.88, 0), (0.69, 0), (0.44, 0),
                                (0.43, 0), (0.22, 1), (0.21, RankingMetrics.FAKE_DOC_LABEL)],
                       RankingMetrics.FAKE_DOC_LABEL)
 
-        self.assertEqual(metric.metrics[f"Bm25_{metric.name()}"], 2)
-        self.assertEqual(metric.calls_cnt[f"Bm25_{metric.name()}"], 4)
+        self.assertEqual(metric.metrics[f"Bm25_{metric.name()}v1"], 2)
+        self.assertEqual(metric.calls_cnt[f"Bm25_{metric.name()}v1"], 4)
 
         metric.update("Bm25", [(0.88, 0), (0.69, RankingMetrics.FAKE_DOC_LABEL), (0.44, 1),
                                (0.43, 0), (0.22, 0), (0.21, 0)],
                       RankingMetrics.FAKE_DOC_LABEL)
 
-        self.assertEqual(metric.metrics[f"Bm25_{metric.name()}"], 3)
-        self.assertEqual(metric.calls_cnt[f"Bm25_{metric.name()}"], 5)
+        self.assertEqual(metric.metrics[f"Bm25_{metric.name()}v1"], 3)
+        self.assertEqual(metric.calls_cnt[f"Bm25_{metric.name()}v1"], 5)
 
     def test_get(self):
         mock_bm25 = Mock()
@@ -284,7 +289,8 @@ class TestFDARO(unittest.TestCase):
         metric.update("Bm25", [(0.88, RankingMetrics.FAKE_DOC_LABEL), (0.69, 1)], RankingMetrics.FAKE_DOC_LABEL)
         result = metric.get()
         answer = {
-            f"Bm25_{metric.name()}": 1
+            f"Bm25_{metric.name()}v1": 1,
+            f"Bm25_{metric.name()}v2": 1
         }
         self.assertEqual(len(result), len(answer))
         for name_metric in result.keys():
@@ -296,7 +302,8 @@ class TestFDARO(unittest.TestCase):
 
         result = metric.get()
         answer = {
-            f"Bm25_{metric.name()}": 1 / 2
+            f"Bm25_{metric.name()}v1": 1 / 2,
+            f"Bm25_{metric.name()}v2": 1 / 2
         }
         self.assertEqual(len(result), len(answer))
         for name_metric in result.keys():
@@ -308,7 +315,8 @@ class TestFDARO(unittest.TestCase):
 
         result = metric.get()
         answer = {
-            f"Bm25_{metric.name()}": 2 / 3
+            f"Bm25_{metric.name()}v1": 2 / 3,
+            f"Bm25_{metric.name()}v2": 2 / 3
         }
         self.assertEqual(len(result), len(answer))
         for name_metric in result.keys():
@@ -320,7 +328,8 @@ class TestFDARO(unittest.TestCase):
 
         result = metric.get()
         answer = {
-            f"Bm25_{metric.name()}": 3 / 4
+            f"Bm25_{metric.name()}v1": 3 / 4,
+            f"Bm25_{metric.name()}v2": 3 / 4,
         }
         self.assertEqual(len(result), len(answer))
         for name_metric in result.keys():
@@ -332,7 +341,8 @@ class TestFDARO(unittest.TestCase):
 
         result = metric.get()
         answer = {
-            f"Bm25_{metric.name()}": 3 / 5
+            f"Bm25_{metric.name()}v1": 3 / 5,
+            f"Bm25_{metric.name()}v2": 3 / 5
         }
         self.assertEqual(len(result), len(answer))
         for name_metric in result.keys():
