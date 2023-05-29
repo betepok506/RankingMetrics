@@ -53,16 +53,16 @@ class TestRankingMetrics(unittest.TestCase):
     def test_update(self):
         mock_LaBSE = Mock()
         mock_LaBSE.name.return_value = "LaBSE"
-        mock_LaBSE.ranking.return_value = [(0.97, 1),
+        mock_LaBSE.ranking.return_value = [(0.97, 2),
                                            (0.88, RankingMetrics.FAKE_DOC_LABEL),
-                                           (0.76, 2),
+                                           (0.76, 3),
                                            (0.001, 0)]
 
         mock_bm25 = Mock()
         mock_bm25.name.return_value = "Bm25"
-        mock_bm25.ranking.return_value = [(0.97, 1),
+        mock_bm25.ranking.return_value = [(0.97, 2),
                                           (0.88, RankingMetrics.FAKE_DOC_LABEL),
-                                          (0.76, 2),
+                                          (0.76, 3),
                                           (0.001, 0)]
         r_metrics = [mock_LaBSE, mock_bm25]
         metric = RankingMetrics(r_metrics)

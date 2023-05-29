@@ -248,7 +248,7 @@ class TestFDARO(unittest.TestCase):
         r_metrics = [mock_bm25]
         metric = FDARO(r_metrics)
 
-        metric.update("Bm25", [(0.88, RankingMetrics.FAKE_DOC_LABEL), (0.69, 1)], RankingMetrics.FAKE_DOC_LABEL)
+        metric.update("Bm25", [(0.88, RankingMetrics.FAKE_DOC_LABEL), (0.69, 2)], RankingMetrics.FAKE_DOC_LABEL)
         self.assertEqual(metric.metrics[f"Bm25_{metric.name()}v1"], 1)
         self.assertEqual(metric.calls_cnt[f"Bm25_{metric.name()}v1"], 1)
 
@@ -270,14 +270,14 @@ class TestFDARO(unittest.TestCase):
                                (0.43, 0), (0.22, 1), (0.21, RankingMetrics.FAKE_DOC_LABEL)],
                       RankingMetrics.FAKE_DOC_LABEL)
 
-        self.assertEqual(metric.metrics[f"Bm25_{metric.name()}v1"], 2)
+        self.assertEqual(metric.metrics[f"Bm25_{metric.name()}v1"], 3)
         self.assertEqual(metric.calls_cnt[f"Bm25_{metric.name()}v1"], 4)
 
-        metric.update("Bm25", [(0.88, 0), (0.69, RankingMetrics.FAKE_DOC_LABEL), (0.44, 1),
+        metric.update("Bm25", [(0.88, 0), (0.69, RankingMetrics.FAKE_DOC_LABEL), (0.44, 2),
                                (0.43, 0), (0.22, 0), (0.21, 0)],
                       RankingMetrics.FAKE_DOC_LABEL)
 
-        self.assertEqual(metric.metrics[f"Bm25_{metric.name()}v1"], 3)
+        self.assertEqual(metric.metrics[f"Bm25_{metric.name()}v1"], 4)
         self.assertEqual(metric.calls_cnt[f"Bm25_{metric.name()}v1"], 5)
 
     def test_get(self):
@@ -286,7 +286,7 @@ class TestFDARO(unittest.TestCase):
         r_metrics = [mock_bm25]
         metric = FDARO(r_metrics)
 
-        metric.update("Bm25", [(0.88, RankingMetrics.FAKE_DOC_LABEL), (0.69, 1)], RankingMetrics.FAKE_DOC_LABEL)
+        metric.update("Bm25", [(0.88, RankingMetrics.FAKE_DOC_LABEL), (0.69, 2)], RankingMetrics.FAKE_DOC_LABEL)
         result = metric.get()
         answer = {
             f"Bm25_{metric.name()}v1": 1,
@@ -296,7 +296,7 @@ class TestFDARO(unittest.TestCase):
         for name_metric in result.keys():
             self.assertAlmostEqual(result[name_metric], answer[name_metric])
 
-        metric.update("Bm25", [(0.88, 1), (0.69, RankingMetrics.FAKE_DOC_LABEL), (0.44, 0),
+        metric.update("Bm25", [(0.88, 2), (0.69, RankingMetrics.FAKE_DOC_LABEL), (0.44, 0),
                                (0.43, 0), (0.22, 0), (0.21, 0)],
                       RankingMetrics.FAKE_DOC_LABEL)
 
@@ -310,7 +310,7 @@ class TestFDARO(unittest.TestCase):
             self.assertAlmostEqual(result[name_metric], answer[name_metric])
 
         metric.update("Bm25", [(0.88, 0), (0.69, 0), (0.44, 0),
-                               (0.43, 0), (0.22, RankingMetrics.FAKE_DOC_LABEL), (0.21, 1)],
+                               (0.43, 0), (0.22, RankingMetrics.FAKE_DOC_LABEL), (0.21, 2)],
                       RankingMetrics.FAKE_DOC_LABEL)
 
         result = metric.get()
@@ -323,7 +323,7 @@ class TestFDARO(unittest.TestCase):
             self.assertAlmostEqual(result[name_metric], answer[name_metric])
 
         metric.update("Bm25", [(0.88, 0), (0.69, 0), (0.44, RankingMetrics.FAKE_DOC_LABEL),
-                               (0.43, 0), (0.22, 0), (0.21, 1)],
+                               (0.43, 0), (0.22, 0), (0.21, 3)],
                       RankingMetrics.FAKE_DOC_LABEL)
 
         result = metric.get()

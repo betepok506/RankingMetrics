@@ -112,7 +112,8 @@ class FDARO:
 
         is_first = False
         for item in ranking_list:
-            if item[1] > 0:
+            if item[1] > 1:  # теперь 1 обозначает, что документ не релевантен. Релевантны те, лейблы которых равны 2
+                # или 3
                 break
             elif item[1] in fake_doc_label:
                 is_first = True
@@ -130,15 +131,13 @@ class FDARO:
         selected = np.array(selected)
         scores = np.array(scores)
 
-        res = np.where(selected == 1.)
-        selected_idxs = res[0]
-        fake_idxs = np.where(selected == fake_doc_label[0])[0]
+        res = np.where(selected > 1.)
+        selected_idxs = res[0]  # выбираем индексы релевантных элементов
+        fake_idxs = np.where(selected == fake_doc_label[0])[0]  # выбираем индексы фейков
         upper_or_not = (scores[fake_idxs] - scores[selected_idxs]) > 1e-12
         upper_or_not = upper_or_not.astype(int)
-        if selected.sum() == -1:  # если пользователь ничего не выбрал, считаем, что метрика равна 1
-            upper_or_not = np.array([1])
 
-        if upper_or_not.sum() > 0:
+        if upper_or_not.sum() == len(upper_or_not) and len(upper_or_not) > 0:
             self.metrics[metric_name + self._separator + self.name() + self.versions[1]] += 1
         self.calls_cnt[metric_name + self._separator + self.name() + self.versions[1]] += 1
 
