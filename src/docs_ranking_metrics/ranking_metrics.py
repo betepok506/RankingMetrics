@@ -1,8 +1,10 @@
+import numpy as np
+
 from rank_bm25 import BM25Okapi
 from typing import List, Dict, Tuple, Union
-from sentence_transformers import SentenceTransformer, util
+from sentence_transformers import SentenceTransformer, util, CrossEncoder
 from .evaluation_metrics import (
-    TopK, AverageLoc, FDARO
+    TopK, AverageLoc, FDARO, UpQuartile, AverageRelLoc
 )
 
 
@@ -133,7 +135,116 @@ class LaBSE:
         `List[Tuple[float, int]]`
             Отсортированный список ранжируемых элементов по релевантности
         """
-        return sorted([item for item in zip(scores, labels)], key=lambda x: x[0])
+        return sorted([item for item in zip(scores, labels)], key=lambda x: x[0], reverse=True)
+
+
+class MsMarcoST:
+    """Класс метрики ранжирования MS MARCO из sentence-transformers"""
+
+    def __init__(self) -> None:
+        self.model = SentenceTransformer('sentence-transformers/msmarco-bert-base-dot-v5')
+
+    def name(self) -> str:
+        return "MsMarcoST"
+
+    def ranking(self, query: str, sentences: List[str], labels: List[int]) -> List[Tuple[float, int]]:
+        """
+        Функция ранжирования MsMarcoST
+
+        Parameters
+        ------------
+        query: `str`
+            Строка запроса
+        sentences: `List[str]`
+            Список строк текстов
+        labels: `List[int]`
+            Список меток текстов
+
+        Returns
+        ------------
+        `List[Tuple[float, int]]`
+            Список пар, где пара имеет вид (скор, метка), отсортированных по убыванию скоров
+        """
+        query = self.model.encode(query)
+        embeddings = self.model.encode(sentences)
+        scores = util.dot_score(query, embeddings).numpy()[0]
+        scores = self._sorted(scores, labels)
+        return scores
+
+    def _sorted(self, scores: List[float], labels: List[int]) -> List[Tuple[float, int]]:
+        """
+        Функция сортировки оценки и лейблов
+
+        Parameters
+        ------------
+        scores: `List[float]`
+            Массив оценок ранка присвоенных ранкером
+        labels: `List[int]`
+            Массив меток
+
+        Returns
+        ------------
+        `List[Tuple[float, int]]`
+            Отсортированный список ранжируемых элементов по релевантности
+        """
+        return sorted([item for item in zip(scores, labels)], key=lambda x: x[0], reverse=True)
+
+
+class MsMarcoCE:
+    """
+    Класс метрики ранжирования MS MARCO из cross-encoder.
+    Данная метрика более устойчива к кейсам, когда пассаж полностью повторяет запрос.
+    """
+
+    def __init__(self) -> None:
+        self.model = CrossEncoder('cross-encoder/ms-marco-TinyBERT-L-2-v2', max_length=512)
+
+    def name(self) -> str:
+        return "MsMarcoCE"
+
+    def ranking(self, query: str, sentences: List[str], labels: List[int]) -> List[Tuple[float, int]]:
+        """
+        Функция ранжирования MsMarcoCE
+
+        Parameters
+        ------------
+        query: `str`
+            Строка запроса
+        sentences: `List[str]`
+            Список строк текстов
+        labels: `List[int]`
+            Список меток текстов
+
+        Returns
+        ------------
+        `List[Tuple[float, int]]`
+            Список пар, где пара имеет вид (скор, метка), отсортированных по убыванию скоров
+        """
+
+        pairs_que_sent = []
+        for sent in sentences:
+            pairs_que_sent.append((query, sent))
+        scores = self.model.predict(pairs_que_sent)
+        scores = self._sorted(scores, labels)
+        return scores
+
+    def _sorted(self, scores: List[float], labels: List[int]) -> List[Tuple[float, int]]:
+        """
+        Функция сортировки оценки и лейблов
+
+        Parameters
+        ------------
+        scores: `List[float]`
+            Массив оценок ранка присвоенных ранкером
+        labels: `List[int]`
+            Массив меток
+
+        Returns
+        ------------
+        `List[Tuple[float, int]]`
+            Отсортированный список ранжируемых элементов по релевантности
+        """
+        return sorted([item for item in zip(scores, labels)], key=lambda x: x[0], reverse=True)
 
 
 class RankingMetrics:
@@ -147,8 +258,13 @@ class RankingMetrics:
         self.fake_doc_above_relevant_one = FDARO(metrics)
         # Количество случаев когда фейковый документ вошел в топ 1
         self.fake_top_k = TopK(metrics)
+        self.upper_quartile = UpQuartile(metrics)
+        # Среднее относительное место фейковых документов в выдаче
+        self.average_rel_place_fake_doc = AverageRelLoc(metrics)
         # Массив метрик для подсчета
         self.metrics = metrics
+        # Число моделей для подсчета метрик
+        self.num_metrics = len(metrics)
 
     def update(self, query: str, sentences: List[str], labels: List[int]) -> None:
         """
@@ -182,6 +298,8 @@ class RankingMetrics:
             self.fake_top_k.update(cur_metric.name(), ranking_list, RankingMetrics.FAKE_DOC_LABEL)
             self.fake_doc_above_relevant_one.update(cur_metric.name(), ranking_list, RankingMetrics.FAKE_DOC_LABEL)
             self.average_place_fake_doc.update(cur_metric.name(), ranking_list, RankingMetrics.FAKE_DOC_LABEL)
+            self.average_rel_place_fake_doc.update(cur_metric.name(), ranking_list, RankingMetrics.FAKE_DOC_LABEL)
+            self.upper_quartile.update(cur_metric.name(), ranking_list, RankingMetrics.FAKE_DOC_LABEL)
 
     def get(self) -> Dict:
         """
@@ -202,4 +320,37 @@ class RankingMetrics:
         for key_, value in self.fake_doc_above_relevant_one.get().items():
             result[key_] = value
 
+        for key_, value in self.upper_quartile.get().items():
+            result[key_] = value
+
+        for key_, value in self.average_rel_place_fake_doc.get().items():
+            result[key_] = value
+
         return result
+
+    def show_metrics(self) -> None:
+        for i, (key_, value) in enumerate(self.average_place_fake_doc.get().items()):
+            print(f"{key_}: {np.round(value, 2)}", end="   ")
+
+        print("\n-----------------------------")
+        for i, (key_, value) in enumerate(self.average_rel_place_fake_doc.get().items()):
+            print(f"{key_}: {np.round(value, 2)}", end="   ")
+
+        print("\n-----------------------------")
+        fake_top_k_it = list(self.fake_top_k.get().items())
+        for i in range(3):
+            for j in range(self.num_metrics):
+                print(f"{fake_top_k_it[i + 3*j][0]}: {np.round(fake_top_k_it[i + 3*j][1], 2)}", end="   ")
+            print()
+
+        print("-----------------------------")
+        fake_doc_above_relevant_one_it = list(self.fake_doc_above_relevant_one.get().items())
+        for i in range(2):
+            for j in range(self.num_metrics):
+                print(f"{fake_doc_above_relevant_one_it[i + 2*j][0]}: {np.round(fake_doc_above_relevant_one_it[i + 2*j][1], 4)}", end="   ")
+            print()
+
+        print("-----------------------------")
+        for i, (key_, value) in enumerate(self.upper_quartile.get().items()):
+            print(f"{key_}: {np.round(value, 2)}", end="   ")
+        print("\n\n")
