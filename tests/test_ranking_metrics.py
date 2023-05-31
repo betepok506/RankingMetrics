@@ -53,38 +53,44 @@ class TestRankingMetrics(unittest.TestCase):
     def test_update(self):
         mock_LaBSE = Mock()
         mock_LaBSE.name.return_value = "LaBSE"
-        mock_LaBSE.ranking.return_value = [(0.97, 1),
+        mock_LaBSE.ranking.return_value = [(0.97, 2),
                                            (0.88, RankingMetrics.FAKE_DOC_LABEL),
-                                           (0.76, 2),
+                                           (0.76, 3),
                                            (0.001, 0)]
 
         mock_bm25 = Mock()
         mock_bm25.name.return_value = "Bm25"
-        mock_bm25.ranking.return_value = [(0.97, 1),
+        mock_bm25.ranking.return_value = [(0.97, 2),
                                           (0.88, RankingMetrics.FAKE_DOC_LABEL),
-                                          (0.76, 2),
+                                          (0.76, 3),
                                           (0.001, 0)]
         r_metrics = [mock_LaBSE, mock_bm25]
         metric = RankingMetrics(r_metrics)
         result = metric.get()
         for name_metric in result.keys():
             self.assertEqual(result[name_metric], 0)
-        self.assertEqual(len(result), 10)
+        self.assertEqual(len(result), 16) # теперь считается 8 метрик для каждой модели
 
         metric.update('test_query', ['1', '2', '3', '4'], [1, -1, 2, 0])
         result = metric.get()
-        self.assertEqual(len(result), 10)
+        self.assertEqual(len(result), 16)
         self.assertEqual(result['Bm25_Top@1'], 0)
         self.assertEqual(result['Bm25_Top@3'], 1)
         self.assertEqual(result['Bm25_Top@5'], 1)
-        self.assertEqual(result['Bm25_FDARO'], 0)
+        self.assertEqual(result['Bm25_FDARO@v1'], 0)
+        self.assertEqual(result['Bm25_FDARO@v2'], 0)
         self.assertEqual(result['Bm25_AverageLoc'], 2)
+        self.assertEqual(result['Bm25_AverageRelLoc'], 0.5)
+        self.assertEqual(result['Bm25_UpQuartile'], 0)
 
         self.assertEqual(result['LaBSE_Top@1'], 0)
         self.assertEqual(result['LaBSE_Top@3'], 1)
         self.assertEqual(result['LaBSE_Top@5'], 1)
-        self.assertEqual(result['LaBSE_FDARO'], 0)
+        self.assertEqual(result['LaBSE_FDARO@v1'], 0)
+        self.assertEqual(result['LaBSE_FDARO@v2'], 0)
         self.assertEqual(result['LaBSE_AverageLoc'], 2)
+        self.assertEqual(result['LaBSE_AverageRelLoc'], 0.5)
+        self.assertEqual(result['LaBSE_UpQuartile'], 0)
 
 
 if __name__ == "__main__":
