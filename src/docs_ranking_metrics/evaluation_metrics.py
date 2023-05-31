@@ -151,10 +151,10 @@ class FDARO:
         # selected_idxs = res[0]  # выбираем индексы релевантных элементов
         # fake_idxs = np.where(selected == fake_doc_label[0])[0]  # выбираем индексы фейков
         upper_or_not = (scores_fake - scores_relevant) > 1e-12
-        upper_or_not = upper_or_not.astype(int)
+        # upper_or_not = upper_or_not.astype(int)
 
-        if upper_or_not.sum() == len(upper_or_not) and len(upper_or_not) > 0:
-            self.metrics[metric_name + self._separator + self.name() + self.versions[1]] += 1
+        # if upper_or_not.sum() == len(upper_or_not) and len(upper_or_not) > 0:
+        self.metrics[metric_name + self._separator + self.name() + self.versions[1]] += int(upper_or_not)
         self.calls_cnt[metric_name + self._separator + self.name() + self.versions[1]] += 1
 
     def get(self) -> Dict[str, float]:
