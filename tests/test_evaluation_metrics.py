@@ -246,7 +246,7 @@ class TestFDARO(unittest.TestCase):
         mock_bm25 = Mock()
         mock_bm25.name.return_value = "Bm25"
         r_metrics = [mock_bm25]
-        metric = FDARO(r_metrics)
+        metric = FDARO(r_metrics, [1, 2, 3])
 
         metric.update("Bm25", [(0.88, RankingMetrics.FAKE_DOC_LABEL), (0.69, 2)], RankingMetrics.FAKE_DOC_LABEL)
         self.assertEqual(metric.metrics[f"Bm25_{metric.name()}v1"], 1)
@@ -270,21 +270,21 @@ class TestFDARO(unittest.TestCase):
                                (0.43, 0), (0.22, 1), (0.21, RankingMetrics.FAKE_DOC_LABEL)],
                       RankingMetrics.FAKE_DOC_LABEL)
 
-        self.assertEqual(metric.metrics[f"Bm25_{metric.name()}v1"], 3)
+        self.assertEqual(metric.metrics[f"Bm25_{metric.name()}v1"], 2)
         self.assertEqual(metric.calls_cnt[f"Bm25_{metric.name()}v1"], 4)
 
         metric.update("Bm25", [(0.88, 0), (0.69, RankingMetrics.FAKE_DOC_LABEL), (0.44, 2),
                                (0.43, 0), (0.22, 0), (0.21, 0)],
                       RankingMetrics.FAKE_DOC_LABEL)
 
-        self.assertEqual(metric.metrics[f"Bm25_{metric.name()}v1"], 4)
+        self.assertEqual(metric.metrics[f"Bm25_{metric.name()}v1"], 3)
         self.assertEqual(metric.calls_cnt[f"Bm25_{metric.name()}v1"], 5)
 
     def test_get(self):
         mock_bm25 = Mock()
         mock_bm25.name.return_value = "Bm25"
         r_metrics = [mock_bm25]
-        metric = FDARO(r_metrics)
+        metric = FDARO(r_metrics, [1, 2, 3])
 
         metric.update("Bm25", [(0.88, RankingMetrics.FAKE_DOC_LABEL), (0.69, 2)], RankingMetrics.FAKE_DOC_LABEL)
         result = metric.get()
