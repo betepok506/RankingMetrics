@@ -1,6 +1,7 @@
 from typing import List, Union, Tuple, Dict
 import numpy as np
 
+
 class TopK:
     TOP1 = 1
     TOP3 = 3
@@ -81,10 +82,15 @@ class FDARO:
     оказывается выше хотя бы одного.
     """
 
-    def __init__(self, ranking_metrics: List) -> None:
+    def __init__(self, ranking_metrics: List, relevant_doc_label: Union[int, List] = 1) -> None:
         self._separator = "_"
         self.metrics, self.calls_cnt = {}, {}
         self.versions = ["v1", "v2"]
+        if isinstance(relevant_doc_label, int):
+            self.relevant_doc_label = [relevant_doc_label]
+        else:
+            self.relevant_doc_label = relevant_doc_label
+
         for cur_metric in ranking_metrics:
             for version in self.versions:
                 self.metrics[cur_metric.name() + self._separator + self.name() + version] = 0
@@ -104,6 +110,8 @@ class FDARO:
             Результат ранжирующей модели
         fake_doc_label: `Union[int, List[int]]`
             Метка или массив меток, принадлежащих фейковым документам
+        relevant_doc_label: `Union[int, List[int]]`
+            Метка или массив меток, принадлежащих релевантным документам
         """
         if isinstance(fake_doc_label, int):
             fake_doc_label = [fake_doc_label]
@@ -112,8 +120,7 @@ class FDARO:
 
         is_first = False
         for item in ranking_list:
-            if item[1] > 1:  # теперь 1 обозначает, что документ не релевантен. Релевантны те, лейблы которых равны 2
-                # или 3
+            if item[1] in self.relevant_doc_label:
                 break
             elif item[1] in fake_doc_label:
                 is_first = True
@@ -128,13 +135,22 @@ class FDARO:
         for item in ranking_list:
             scores.append(item[0])
             selected.append(item[1])
-        selected = np.array(selected)
-        scores = np.array(scores)
 
-        res = np.where(selected > 1.)
-        selected_idxs = res[0]  # выбираем индексы релевантных элементов
-        fake_idxs = np.where(selected == fake_doc_label[0])[0]  # выбираем индексы фейков
-        upper_or_not = (scores[fake_idxs] - scores[selected_idxs]) > 1e-12
+        # selected = np.array(selected)
+        # scores = np.array(scores)
+
+        scores_relevant = -1e9
+        scores_fake = -1e9
+        for ind in range(len(selected)):
+            if selected[ind] in self.relevant_doc_label and scores_relevant == -1e9:
+                scores_relevant = scores[ind]
+            elif selected[ind] in fake_doc_label and scores_fake == -1e9:
+                scores_fake = scores[ind]
+
+        # res = np.where(selected > 1.)
+        # selected_idxs = res[0]  # выбираем индексы релевантных элементов
+        # fake_idxs = np.where(selected == fake_doc_label[0])[0]  # выбираем индексы фейков
+        upper_or_not = (scores_fake - scores_relevant) > 1e-12
         upper_or_not = upper_or_not.astype(int)
 
         if upper_or_not.sum() == len(upper_or_not) and len(upper_or_not) > 0:
@@ -301,6 +317,7 @@ class AverageRelLoc:
                 value / max(1, self.calls_cnt[metric_name + self._separator + self.name()])
 
         return result
+
     def name(self) -> str:
         '''
         Функция для получения имени метрики
@@ -352,9 +369,14 @@ class UpQuartile:
         scores = np.array(scores)
 
         upper_quartile = np.quantile(scores, 0.75)
-        fake_idxs = np.where(selected == fake_doc_label[0])[0]
+        # fake_idxs = np.where(selected == fake_doc_label[0])[0]
+        scores_fake = -1e9
+        for ind in range(len(selected)):
+            if selected[ind] in fake_doc_label:
+                scores_fake = selected[ind]
+                break
 
-        if scores[fake_idxs] >= upper_quartile:
+        if scores_fake >= upper_quartile:
             self.metrics[metric_name + self._separator + self.name()] += 1
 
         self.calls_cnt[metric_name + self._separator + self.name()] += 1
@@ -396,7 +418,9 @@ def _check_update_args(fake_doc_label: Union[int, List[int]],
     Parameters
     -------------
     fake_doc_label: `Union[int, List[int]]`
-        Метка или списко меток, обозначающих фейковый документ
+        Метка или список меток, обозначающих фейковый документ
+    relevant_doc_label: `Union[int, List[int]]`
+        Метка или список меток, обозначающих релевантные документы
     ranking_list: `List[Union[Tuple[float, int], List[float, int]]]`
         Список оценок ранжировщика
     '''
