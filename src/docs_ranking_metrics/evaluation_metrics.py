@@ -82,14 +82,14 @@ class FDARO:
     оказывается выше хотя бы одного.
     """
 
-    def __init__(self, ranking_metrics: List, relevant_doc_label: Union[int, List] = 1) -> None:
+    def __init__(self, ranking_metrics: List, relevant_doc_labelss: Union[int, List] = 1) -> None:
         self._separator = "_"
         self.metrics, self.calls_cnt = {}, {}
         self.versions = ["v1", "v2"]
-        if isinstance(relevant_doc_label, int):
-            self.relevant_doc_label = [relevant_doc_label]
+        if isinstance(relevant_doc_labelss, int):
+            self.relevant_doc_labelss = [relevant_doc_labelss]
         else:
-            self.relevant_doc_label = relevant_doc_label
+            self.relevant_doc_labelss = relevant_doc_labelss
 
         for cur_metric in ranking_metrics:
             for version in self.versions:
@@ -110,7 +110,7 @@ class FDARO:
             Результат ранжирующей модели
         fake_doc_label: `Union[int, List[int]]`
             Метка или массив меток, принадлежащих фейковым документам
-        relevant_doc_label: `Union[int, List[int]]`
+        relevant_doc_labelss: `Union[int, List[int]]`
             Метка или массив меток, принадлежащих релевантным документам
         """
         if isinstance(fake_doc_label, int):
@@ -120,7 +120,7 @@ class FDARO:
 
         is_first = False
         for item in ranking_list:
-            if item[1] in self.relevant_doc_label:
+            if item[1] in self.relevant_doc_labelss:
                 break
             elif item[1] in fake_doc_label:
                 is_first = True
@@ -140,7 +140,7 @@ class FDARO:
         scores_fake = -1e9
         for ind in range(len(selected)):
             # Выбираем последний релевантный элемент
-            if selected[ind] in self.relevant_doc_label:
+            if selected[ind] in self.relevant_doc_labelss:
                 scores_relevant = scores[ind]
             elif selected[ind] in fake_doc_label and scores_fake == -1e9:
                 scores_fake = scores[ind]
@@ -411,8 +411,6 @@ def _check_update_args(fake_doc_label: Union[int, List[int]],
     -------------
     fake_doc_label: `Union[int, List[int]]`
         Метка или список меток, обозначающих фейковый документ
-    relevant_doc_label: `Union[int, List[int]]`
-        Метка или список меток, обозначающих релевантные документы
     ranking_list: `List[Union[Tuple[float, int], List[float, int]]]`
         Список оценок ранжировщика
     '''

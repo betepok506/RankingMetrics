@@ -304,7 +304,7 @@ class RankingMetrics:
     """Класс аккумулирующий все метрики"""
     FAKE_DOC_LABEL: int = -1
 
-    def __init__(self, metrics, relevant_doc_label: Union[int, List] = 1) -> None:
+    def __init__(self, metrics, relevant_doc_labels: Union[int, List] = 1) -> None:
         """
 
         Parameters
@@ -318,7 +318,7 @@ class RankingMetrics:
         # Среднее место фейковых документов в финальной выдаче
         self.average_place_fake_doc = AverageLoc(metrics)
         # Количество случаев когда фейковый документ выше релевантного
-        self.fake_doc_above_relevant_one = FDARO(metrics, relevant_doc_label)
+        self.fake_doc_above_relevant_one = FDARO(metrics, relevant_doc_labels)
         # Количество случаев когда фейковый документ вошел в топ 1
         self.fake_top_k = TopK(metrics)
         self.upper_quartile = UpQuartile(metrics)
