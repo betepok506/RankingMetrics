@@ -136,24 +136,16 @@ class FDARO:
             scores.append(item[0])
             selected.append(item[1])
 
-        # selected = np.array(selected)
-        # scores = np.array(scores)
-
         scores_relevant = -1e9
         scores_fake = -1e9
         for ind in range(len(selected)):
-            if selected[ind] in self.relevant_doc_label and scores_relevant == -1e9:
+            # Выбираем последний релевантный элемент
+            if selected[ind] in self.relevant_doc_label:
                 scores_relevant = scores[ind]
             elif selected[ind] in fake_doc_label and scores_fake == -1e9:
                 scores_fake = scores[ind]
 
-        # res = np.where(selected > 1.)
-        # selected_idxs = res[0]  # выбираем индексы релевантных элементов
-        # fake_idxs = np.where(selected == fake_doc_label[0])[0]  # выбираем индексы фейков
         upper_or_not = (scores_fake - scores_relevant) > 1e-12
-        # upper_or_not = upper_or_not.astype(int)
-
-        # if upper_or_not.sum() == len(upper_or_not) and len(upper_or_not) > 0:
         self.metrics[metric_name + self._separator + self.name() + self.versions[1]] += int(upper_or_not)
         self.calls_cnt[metric_name + self._separator + self.name() + self.versions[1]] += 1
 
@@ -369,7 +361,7 @@ class UpQuartile:
         scores = np.array(scores)
 
         upper_quartile = np.quantile(scores, 0.75)
-        # fake_idxs = np.where(selected == fake_doc_label[0])[0]
+
         scores_fake = -1e9
         for ind in range(len(selected)):
             if selected[ind] in fake_doc_label:

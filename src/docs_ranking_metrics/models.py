@@ -24,7 +24,7 @@ class ModelUSE():
         """
         Функция для векторизации списка текстов
 
-         Parameters
+        Parameters
         ------------
         sentences: `List[str]`
             Список  текстов

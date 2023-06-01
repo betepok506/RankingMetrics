@@ -7,8 +7,6 @@ from .evaluation_metrics import (
     TopK, AverageLoc, FDARO, UpQuartile, AverageRelLoc
 )
 from .models import ModelUSE
-import tensorflow as tf
-from tensorflow import convert_to_tensor
 import torch
 
 class Bm25:
@@ -306,11 +304,21 @@ class RankingMetrics:
     """Класс аккумулирующий все метрики"""
     FAKE_DOC_LABEL: int = -1
 
-    def __init__(self, metrics) -> None:
+    def __init__(self, metrics, relevant_doc_label: Union[int, List] = 1) -> None:
+        """
+
+        Parameters
+        ------------
+        metrics: `Union[LaBSE, USE, Bm25, MsMarcoCE, MsMarcoST]`
+            Классы метрик ранжирования
+
+        relevant_doc_label: `Union[int, List]`
+            Метка или массив меток, обозначающих релевантные документы. (Используется для оценки FDARO)
+        """
         # Среднее место фейковых документов в финальной выдаче
         self.average_place_fake_doc = AverageLoc(metrics)
         # Количество случаев когда фейковый документ выше релевантного
-        self.fake_doc_above_relevant_one = FDARO(metrics)
+        self.fake_doc_above_relevant_one = FDARO(metrics, relevant_doc_label)
         # Количество случаев когда фейковый документ вошел в топ 1
         self.fake_top_k = TopK(metrics)
         self.upper_quartile = UpQuartile(metrics)
