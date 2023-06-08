@@ -6,7 +6,8 @@ from sentence_transformers import SentenceTransformer, util, CrossEncoder
 from .evaluation_metrics import (
     TopK, AverageLoc, FDARO, UpQuartile, AverageRelLoc
 )
-
+from .models import ModelUSE
+import torch
 
 class Bm25:
     """Класс метрики ранжирования bm25"""
@@ -138,6 +139,7 @@ class LaBSE:
         return sorted([item for item in zip(scores, labels)], key=lambda x: x[0], reverse=True)
 
 
+
 class MsMarcoST:
     """Класс метрики ранжирования MS MARCO из sentence-transformers"""
 
@@ -246,16 +248,77 @@ class MsMarcoCE:
         """
         return sorted([item for item in zip(scores, labels)], key=lambda x: x[0], reverse=True)
 
+class USE:
+    """Класс метрики ранжирования USE"""
+    def __init__(self):
+        self.model = ModelUSE()
+
+    def name(self) -> str:
+        return "USE"
+
+    def ranking(self, query: str, sentences: List[str], labels: List[int]) -> List[Tuple[float, int]]:
+        """
+        Функция ранжирования USE
+
+        Parameters
+        ------------
+        query: `str`
+            Строка запроса
+        sentences: `List[str]`
+            Список строк текстов
+        labels: `List[int]`
+            Список меток текстов
+
+        Returns
+        ------------
+        `List[Tuple[float, int]]`
+            Список оценок релевантности текстов
+        """
+
+        sentences.append(query)
+        embeddings = [x.numpy() for x in self.model.encode(sentences)]
+        embeddings = torch.Tensor(embeddings)
+        scores = util.pytorch_cos_sim(embeddings[-1], embeddings[:-1]).numpy()[0]
+        scores = self._sorted(scores, labels)
+        return scores
+
+    def _sorted(self, scores: List[float], labels: List[int]) -> List[Tuple[float, int]]:
+        """
+        Функция сортировки оценки и лейблов
+
+        Parameters
+        ------------
+        scores: `List[float]`
+            Массив оценок ранка присвоенных ранкером
+        labels: `List[int]`
+            Массив меток
+
+        Returns
+        ------------
+        `List[Tuple[float, int]]`
+            Отсортированный список ранжируемых элементов по релевантности
+        """
+        return sorted([item for item in zip(scores, labels)], key=lambda x: x[0], reverse=True)
 
 class RankingMetrics:
     """Класс аккумулирующий все метрики"""
     FAKE_DOC_LABEL: int = -1
 
-    def __init__(self, metrics) -> None:
+    def __init__(self, metrics, relevant_doc_labels: Union[int, List] = 1) -> None:
+        """
+
+        Parameters
+        ------------
+        metrics: `Union[LaBSE, USE, Bm25, MsMarcoCE, MsMarcoST]`
+            Классы метрик ранжирования
+
+        relevant_doc_label: `Union[int, List]`
+            Метка или массив меток, обозначающих релевантные документы. (Используется для оценки FDARO)
+        """
         # Среднее место фейковых документов в финальной выдаче
         self.average_place_fake_doc = AverageLoc(metrics)
         # Количество случаев когда фейковый документ выше релевантного
-        self.fake_doc_above_relevant_one = FDARO(metrics)
+        self.fake_doc_above_relevant_one = FDARO(metrics, relevant_doc_labels)
         # Количество случаев когда фейковый документ вошел в топ 1
         self.fake_top_k = TopK(metrics)
         self.upper_quartile = UpQuartile(metrics)

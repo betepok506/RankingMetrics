@@ -41,7 +41,7 @@ bash tools/run_docsgen.sh
 Что можно сделать (идеи приветствуются):
 
 - [X] Исправить подсчет метрик под документы разной релевантности
-- [ ] Внедрить модель https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-6-v2
-- [ ] Придумать дополнительные метрики
+- [X] Внедрить модель https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-6-v2
+- [X] Придумать дополнительные метрики
 - [X] Завернуть все в пакет
 - [X] Написать тесты, workflows

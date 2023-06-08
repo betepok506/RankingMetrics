@@ -65,7 +65,7 @@ class TestRankingMetrics(unittest.TestCase):
                                           (0.76, 3),
                                           (0.001, 0)]
         r_metrics = [mock_LaBSE, mock_bm25]
-        metric = RankingMetrics(r_metrics)
+        metric = RankingMetrics(r_metrics, [1, 2])
         result = metric.get()
         for name_metric in result.keys():
             self.assertEqual(result[name_metric], 0)
